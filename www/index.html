@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="x-ua-compatible" content="IE=Edge">
+    <meta name="viewport" content="width=device-width, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <script type="text/javascript" src="js/enchant.js"></script>
+    <script type="text/javascript" src="js/ui.enchant.js"></script>
+    <script type="text/javascript" src="js/nineleap.enchant.js"></script>
+    <style type="text/css">
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+<body>
+<script>
+
+gx = 0;
+gy = 0;
+
+window.addEventListener("devicemotion",function(gyro){
+  gx = gyro.accelerationIncludingGravity.x;
+  gy = gyro.accelerationIncludingGravity.y;
+  if( navigator.userAgent.indexOf("iPhone")){
+   gx = gx * -1;
+   gy = gy * -1;
+  }
+},true);
+
+
+enchant(); //enchantというライブラリを実行する
+
+enchant.Sound.enabledInMobileSafari = true;
+
+gameWidth = 320;
+gameHeight = 460*window.innerWidth/gameWidth;
+
+window.onload = function(){ //functionは関数　かっこは閉じなければならない
+                            //スラッシュから後の文章を「コメント」という。作成上のメモ
+
+    var game = new Core(gameWidth,gameHeight ); //ゲームの画面を作成する大きさは320px×320px
+    game.fps = 15; //１秒間の画面の更新数
+    game.preload("./img/chara1.png","./img/chara5.png","./img/icon0.png","./img/chara7.png","laser2.mp3","bomb1.mp3"); //ゲームに画像を読み込む
+    game.onload = function(){
+
+    sound1 = game.assets["laser2.mp3"].clone();
+    sound2 = game.assets["bomb1.mp3"].clone();
+                                      //R G B
+    game.rootScene.backgroundColor = "#b0e0e6";
+
+    var scoreLabel = new ScoreLabel(0,0);
+    var lifeLabel =  new LifeLabel(160,0,5);
+    lifeLabel.life = 5; //代入式という。イコールの左（変数など）へ右の値を入れる。
+                        //文の終わりには「；」セミコロンを入れる。
+
+
+//↓↓↓↓Tekiの作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+        var Teki = Class.create(Sprite,{ //クラスの作成
+	  initialize: function(x,y,frame,yy){  //クラスが作られた後の処理
+            Sprite.call(this,32,32); //画面にスプライトを作る
+
+            this.image = game.assets["./img/chara5.png"];
+            this.x = x;
+            this.y = y;
+            this.frame = frame;
+            game.rootScene.addChild(this);
+
+            this.addEventListener("enterframe", function(){
+              this.y += yy;
+
+             if(game.frame%15 == 0){ //if文は「==」でイコールという意味がある。
+               var tekitama = new tekiTama(this.x,this.y,yy+4);
+             }
+
+              if(this.x >gameWidth || this.x <0 || this.y >gameHeight || this.y <0 ){ // ||は「OR、または」という意味
+                game.rootScene.removeChild(this);
+              } 
+
+            });
+
+         } //追記
+       });//追記
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+
+//↓↓↓↓Teki2の作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+       var Teki2 = Class.create(Teki,{      //Classとはプログラムのまとまりのこと。他のクラスを元につくることを「継承」という。
+         initialize:function(x,y,frame,yy){ //function()の中に入れる変数を「引数」という。
+           Teki.call(this,x,y,frame,yy);
+           this.image = game.assets["./img/chara7.png"];
+         }
+       });
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+
+
+//↓↓↓↓Tamaの作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+        var Tama = Class.create(Sprite,{
+	  initialize: function(vy){
+          Sprite.call(this,16,16);
+
+        this.image = game.assets["./img/icon0.png"];
+        this.frame = 48;
+        this.x = kuma.x + 8;
+        this.y = kuma.y;
+        game.rootScene.addChild(this);
+
+        this.addEventListener("enterframe",function(){ //enterframeなど、ある動作でプログラムを実行することを「イベント」という。
+          this.y -= vy;
+
+          if(this.x >gameWidth || this.x <0 || this.y >gameHeight || this.y <0 ){
+            game.rootScene.removeChild(this);
+          } 
+
+        });
+
+        }   //追記
+        }); //追記
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+
+//↓↓↓↓tekiTamaの作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+       var tekiTama = Class.create(Tama,{
+         initialize: function(x,y,yy){
+           Tama.call(this,-yy);
+           this.frame = 60;
+           this.x = x + 8;
+           this.y = y;
+         }
+       });
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+//↓↓↓↓kumaTamaの作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+      var kumaTama = Class.create(Tama,{
+         initialize:function(vy){
+         Tama.call(this,vy);
+         }
+      });
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+//↓↓↓↓kumaTama2の作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+      var kumaTama2 = Class.create(kumaTama,{
+        initialize:function(vy,vx){
+        kumaTama.call(this,vy);
+         this.vy = vy;
+        this.rotation = (Math.atan2(-vy, vx)*180/Math.PI +90);//先頭の-を消す
+        this.addEventListener("enterframe", function(){
+         //this.y+= vy; を消す
+          this.x += vx;
+        });
+      }
+     });      
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+
+//↓↓↓↓Kumaの作成↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓↓
+        var kuma = new Sprite(32, 32);  //スプライトkumaを作成する
+        kuma.image = game.assets["./img/chara1.png"]; //kumaに画像を表示
+        kuma.x = 160; //bearのx座標を指定
+        kuma.y = 320; //bearのy座標を指定
+        kuma.frame = 0; //bearの画像の何番目を使うか指定
+        game.rootScene.addChild(kuma); //画面にbearを登場させる
+        kuma.addEventListener("enterframe", function(){
+           // this.frame = this.age % 2 + 6;
+
+          kuma.x -= gx*3;
+          kuma.y += gy*3;
+
+           if(game.input.right){
+             kuma.x += 8;
+           }
+           if(game.input.down){
+             kuma.y += 8;
+           }
+           if(game.input.left){
+             kuma.x -= 8;
+           }
+           if(game.input.up)  {
+             kuma.y -= 8;
+           }
+
+           if(kuma.x > gameWidth-32){
+             kuma.x = gameWidth-32;
+           }
+           if(kuma.x < 0 ){
+             kuma.x = 0;
+           }
+           if(kuma.y > gameHeight-32){
+             kuma.y = gameHeight-32;
+           }
+           if(kuma.y < 0 ){
+             kuma.y = 0;
+           }
+
+        });
+//↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑↑  
+
+
+      /*
+      game.rootScene.on("touchmove",function(e){
+        kuma.x = e.x;
+        kuma.y = e.y;
+      });
+      */
+
+     game.rootScene.on("touchstart",function(){ 
+       var tama = new kumaTama(8); //Tamaクラスを元にtamaを作る
+       var tama2= new kumaTama2(5,10);
+       var tama3= new kumaTama2(5,-10);
+       sound1.play();
+     });
+
+     kuma.addEventListener("enterframe",function(){
+
+       if(lifeLabel.life == 0){
+         game.end();
+         document.body.onclick = function(){
+          location.reload();
+         };
+       }
+
+       tekiTama.intersect(kuma).forEach(function(pair){
+         game.rootScene.removeChild(pair);
+         lifeLabel.life -= 1;
+       });
+
+       Teki.intersect(kumaTama).forEach(function(pair){
+         game.rootScene.removeChild(pair[0]); //Tekiが消える
+         game.rootScene.removeChild(pair[1]); //Tamaが消える 
+	 scoreLabel.score += 1;
+         sound2.play();
+       });
+
+       Teki.intersect(kuma).forEach(function(pair){
+         game.rootScene.removeChild(pair); //Tekiが消える
+         lifeLabel.life -= 1;
+       });
+
+       if(game.frame % 15 == 0){
+         var teki = new Teki(rand(280),0,0,8); //クラスを元にtekiを作る
+       }
+       if(game.frame % 20 == 0){
+         var teki2 = new Teki2(parseInt(Math.random()*200),0,8,12); //クラスを元にtekiを作る
+       }
+     });
+
+    game.rootScene.addChild(scoreLabel);
+    game.rootScene.addChild(lifeLabel);
+
+
+
+    }
+    game.start();
+}
+</script>
+</body>
+</html>
+
